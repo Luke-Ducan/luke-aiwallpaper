@@ -8,8 +8,8 @@ const ACCESS_KEY_SECRET = process.env.ZHIQITE_KEY_SECRET!;
 const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID!;
 const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY!;
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME!;
-const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL!;
-const R2_BUCKET_ENDPOINT = process.env.R2_BUCKET_ENDPOINT!;
+const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL!; // Publicly accessible URL for the bucket
+const R2_BUCKET_ENDPOINT = process.env.R2_BUCKET_ENDPOINT!; // Cloudflare R2 endpoint
 
 export async function POST(request: NextRequest) {
   try {
@@ -59,7 +59,6 @@ export async function POST(request: NextRequest) {
           "X-Request-req-accessKeyId": ACCESS_KEY_ID,
           "X-Request-req-accessKeySecret": ACCESS_KEY_SECRET,
         },
-        timeout: 60000, // 设置超时时间为 60 秒
       }
     );
 
@@ -90,8 +89,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Function to query task status with retry logic
-async function queryTaskInfo(taskId: string, retries = 10, delayMs = 10000): Promise<string> {
+// Function to query task status
+async function queryTaskInfo(taskId: string, retries = 5, delayMs = 5000): Promise<string> {
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
       const response = await axios.post(
@@ -103,7 +102,6 @@ async function queryTaskInfo(taskId: string, retries = 10, delayMs = 10000): Pro
             "X-Request-req-accessKeyId": ACCESS_KEY_ID,
             "X-Request-req-accessKeySecret": ACCESS_KEY_SECRET,
           },
-          timeout: 60000, // 设置超时时间为 60 秒
         }
       );
 
@@ -115,7 +113,6 @@ async function queryTaskInfo(taskId: string, retries = 10, delayMs = 10000): Pro
           throw new Error("No image URL found in response");
         }
       } else if (data.data?.status === 1 || data.data?.status === 3) {
-        // 如果任务还在进行中，等待指定的时间再重试
         await new Promise((res) => setTimeout(res, delayMs));
       } else {
         throw new Error("Task failed or unknown status");
@@ -124,7 +121,6 @@ async function queryTaskInfo(taskId: string, retries = 10, delayMs = 10000): Pro
       if (attempt === retries - 1) {
         throw error;
       }
-      console.warn(`Retrying queryTaskInfo... Attempt ${attempt + 1}`);
     }
   }
   throw new Error("Task not completed or image not generated");
@@ -142,7 +138,7 @@ async function uploadToR2(imageUrl: string, key: string): Promise<string> {
   });
 
   // Fetch image data
-  const imageResponse = await axios.get(imageUrl, { responseType: "arraybuffer", timeout: 60000 });
+  const imageResponse = await axios.get(imageUrl, { responseType: "arraybuffer" });
   const imageData = imageResponse.data;
 
   // Upload to R2
