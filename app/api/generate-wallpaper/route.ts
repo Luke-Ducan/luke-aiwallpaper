@@ -90,8 +90,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Function to query task status
-async function queryTaskInfo(taskId: string, retries = 5, delayMs = 10000): Promise<string> {
+// Function to query task status with retry logic
+async function queryTaskInfo(taskId: string, retries = 10, delayMs = 10000): Promise<string> {
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
       const response = await axios.post(
@@ -115,6 +115,7 @@ async function queryTaskInfo(taskId: string, retries = 5, delayMs = 10000): Prom
           throw new Error("No image URL found in response");
         }
       } else if (data.data?.status === 1 || data.data?.status === 3) {
+        // 如果任务还在进行中，等待指定的时间再重试
         await new Promise((res) => setTimeout(res, delayMs));
       } else {
         throw new Error("Task failed or unknown status");
