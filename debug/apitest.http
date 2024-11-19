@@ -1,0 +1,7 @@
+### 生成图片
+POST http://localhost:3000/api/generate-wallpaper
+Content-Type: application/json
+
+{
+  "prompt": "A futuristic city skyline, neon lights, cyberpunk"
+}
